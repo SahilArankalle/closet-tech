@@ -22,37 +22,65 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageUrl, onCropComplete, o
   const imgRef = useRef<HTMLImageElement>(null);
 
   const getCroppedImg = async () => {
-    if (!completedCrop || !imgRef.current) return;
+    const image = imgRef.current;
+    const currentCrop = completedCrop || crop;
+    
+    if (!image || !currentCrop) {
+      console.log('Missing image or crop data');
+      return;
+    }
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.log('Failed to get canvas context');
+      return;
+    }
 
-    const image = imgRef.current;
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    canvas.width = completedCrop.width;
-    canvas.height = completedCrop.height;
+    // Convert percentage crop to pixel crop if needed
+    const pixelCrop = {
+      x: currentCrop.unit === '%' ? (currentCrop.x / 100) * image.naturalWidth : currentCrop.x * scaleX,
+      y: currentCrop.unit === '%' ? (currentCrop.y / 100) * image.naturalHeight : currentCrop.y * scaleY,
+      width: currentCrop.unit === '%' ? (currentCrop.width / 100) * image.naturalWidth : currentCrop.width * scaleX,
+      height: currentCrop.unit === '%' ? (currentCrop.height / 100) * image.naturalHeight : currentCrop.height * scaleY,
+    };
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
 
     ctx.drawImage(
       image,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
       0,
       0,
-      completedCrop.width,
-      completedCrop.height
+      pixelCrop.width,
+      pixelCrop.height
     );
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const croppedImageUrl = URL.createObjectURL(blob);
-        onCropComplete(croppedImageUrl);
-      }
-    }, 'image/jpeg', 0.9);
+    return new Promise<void>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const croppedImageUrl = URL.createObjectURL(blob);
+          console.log('Crop successful, calling onCropComplete');
+          onCropComplete(croppedImageUrl);
+        } else {
+          console.log('Failed to create blob from canvas');
+        }
+        resolve();
+      }, 'image/jpeg', 0.9);
+    });
+  };
+
+  const handleReset = () => {
+    const newCrop = { unit: '%' as const, width: 80, height: 80, x: 10, y: 10 };
+    setCrop(newCrop);
+    setCompletedCrop(undefined);
   };
 
   return (
@@ -76,6 +104,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageUrl, onCropComplete, o
               src={imageUrl}
               alt="Crop preview"
               className="max-w-full h-auto rounded-xl"
+              onLoad={() => console.log('Image loaded successfully')}
             />
           </ReactCrop>
         </div>
@@ -89,7 +118,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ imageUrl, onCropComplete, o
           </button>
           <div className="flex space-x-3">
             <button
-              onClick={() => setCrop({ unit: '%', width: 80, height: 80, x: 10, y: 10 })}
+              onClick={handleReset}
               className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors flex items-center space-x-2 font-medium"
             >
               <RotateCcw className="w-4 h-4" />
