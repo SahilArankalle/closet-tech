@@ -83,7 +83,10 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
   };
 
   const handleSave = async () => {
-    if (!croppedImage) return;
+    if (!croppedImage || !formData.color.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -126,9 +129,9 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl w-full max-w-md max-h-[95vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
           <h2 className="text-lg font-semibold text-slate-900">
             {step === 'capture' && 'Capture Item'}
             {step === 'crop' && 'Crop Image'}
@@ -142,147 +145,155 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4">
-          {step === 'capture' && (
-            <div className="space-y-4">
-              <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden relative">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={capturePhoto}
-                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full p-4 shadow-lg hover:scale-105 transition-transform"
-                >
-                  <Camera className="w-6 h-6 text-slate-700" />
-                </button>
-              </div>
-
-              <div className="text-center">
-                <p className="text-slate-600 mb-4">Or upload from gallery</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-200 transition-colors flex items-center space-x-2 mx-auto"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Image</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 'crop' && capturedImage && (
-            <ImageCropper
-              imageUrl={capturedImage}
-              onCropComplete={handleCropComplete}
-              onCancel={() => setStep('capture')}
-            />
-          )}
-
-          {step === 'details' && (
-            <div className="space-y-4">
-              {croppedImage && (
-                <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden mb-4">
-                  <img
-                    src={croppedImage}
-                    alt="Cropped item"
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            {step === 'capture' && (
+              <div className="space-y-4">
+                <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden relative">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
                     className="w-full h-full object-cover"
                   />
+                  <button
+                    onClick={capturePhoto}
+                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full p-4 shadow-lg hover:scale-105 transition-transform"
+                  >
+                    <Camera className="w-6 h-6 text-slate-700" />
+                  </button>
                 </div>
-              )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Item Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter item name"
-                />
+                <div className="text-center">
+                  <p className="text-slate-600 mb-4">Or upload from gallery</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-200 transition-colors flex items-center space-x-2 mx-auto"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Upload Image</span>
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Category
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="top">Top</option>
-                  <option value="bottom">Bottom</option>
-                  <option value="shoes">Shoes</option>
-                  <option value="accessory">Accessory</option>
-                  <option value="outerwear">Outerwear</option>
-                </select>
-              </div>
+            {step === 'crop' && capturedImage && (
+              <ImageCropper
+                imageUrl={capturedImage}
+                onCropComplete={handleCropComplete}
+                onCancel={() => setStep('capture')}
+              />
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Color
-                </label>
-                <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter color"
-                />
-              </div>
+            {step === 'details' && (
+              <div className="space-y-4">
+                {croppedImage && (
+                  <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden mb-4">
+                    <img
+                      src={croppedImage}
+                      alt="Cropped item"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Occasion
-                </label>
-                <select
-                  value={formData.occasion}
-                  onChange={(e) => setFormData({ ...formData, occasion: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="casual">Casual</option>
-                  <option value="formal">Formal</option>
-                  <option value="business">Business</option>
-                  <option value="sport">Sport</option>
-                  <option value="party">Party</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Item Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Enter item name"
+                  />
+                </div>
 
-              <div className="flex space-x-3 pt-4">
-                <button
-                  onClick={() => setStep('crop')}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={loading || !formData.color}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-700 text-white px-4 py-2 rounded-xl hover:from-indigo-700 hover:to-violet-800 transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    'Save Item'
-                  )}
-                </button>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="shoes">Shoes</option>
+                    <option value="accessory">Accessory</option>
+                    <option value="outerwear">Outerwear</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Color *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Enter color"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Occasion
+                  </label>
+                  <select
+                    value={formData.occasion}
+                    onChange={(e) => setFormData({ ...formData, occasion: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="casual">Casual</option>
+                    <option value="formal">Formal</option>
+                    <option value="business">Business</option>
+                    <option value="sport">Sport</option>
+                    <option value="party">Party</option>
+                  </select>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
+        {/* Footer Actions */}
+        {step === 'details' && (
+          <div className="p-4 border-t border-slate-200 flex-shrink-0">
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setStep('crop')}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading || !formData.color.trim()}
+                className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-700 text-white px-4 py-2 rounded-xl hover:from-indigo-700 hover:to-violet-800 transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Save Item'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

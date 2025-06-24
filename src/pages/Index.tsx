@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Sparkles, Calendar, Filter, Plus, Crown, LogOut, User } from 'lucide-react';
+import { Sparkles, Calendar, Filter, Plus, Crown, LogOut, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useClothes } from '../hooks/useClothes';
 import WardrobeGrid from '../components/WardrobeGrid';
@@ -21,7 +21,7 @@ const Index = () => {
   });
 
   const { user, signOut } = useAuth();
-  const { clothes, loading, deleteClothingItem } = useClothes();
+  const { clothes, loading, error, deleteClothingItem } = useClothes();
 
   const filteredItems = clothes.filter(item => {
     return (
@@ -52,6 +52,15 @@ const Index = () => {
     );
   });
 
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await deleteClothingItem(id);
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+      alert('Failed to delete item. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -68,7 +77,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 md:h-16">
             <div className="flex items-center space-x-2 md:space-x-3">
@@ -160,6 +169,16 @@ const Index = () => {
         </div>
       </nav>
 
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center space-x-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 pb-8 md:pb-12">
         {activeTab === 'wardrobe' ? (
@@ -167,7 +186,7 @@ const Index = () => {
             {showFilters && (
               <FilterPanel filters={filters} onFiltersChange={setFilters} />
             )}
-            <WardrobeGrid items={filteredLegacyItems} onDeleteItem={deleteClothingItem} />
+            <WardrobeGrid items={filteredLegacyItems} onDeleteItem={handleDeleteItem} />
           </div>
         ) : activeTab === 'planner' ? (
           <WeeklyPlanner clothingItems={legacyClothes} />

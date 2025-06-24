@@ -17,26 +17,33 @@ export interface ClothingItem {
 export const useClothes = () => {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
   const fetchClothes = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('clothes')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching clothes:', error);
+        setError('Failed to fetch clothing items');
         return;
       }
 
-      // Type assertion to ensure proper typing
       setClothes((data as ClothingItem[]) || []);
     } catch (error) {
       console.error('Error:', error);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -47,9 +54,12 @@ export const useClothes = () => {
   }, [user]);
 
   const addClothingItem = async (item: Omit<ClothingItem, 'id' | 'user_id' | 'created_at'>) => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('clothes')
         .insert([{ ...item, user_id: user.id }])
@@ -58,39 +68,45 @@ export const useClothes = () => {
 
       if (error) {
         console.error('Error adding clothing item:', error);
-        return;
+        throw new Error('Failed to add clothing item');
       }
 
-      // Type assertion for the returned data
       setClothes(prev => [(data as ClothingItem), ...prev]);
       return data as ClothingItem;
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error adding item:', error);
+      throw error;
     }
   };
 
   const deleteClothingItem = async (id: string) => {
     try {
+      setError(null);
       const { error } = await supabase
         .from('clothes')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) {
         console.error('Error deleting clothing item:', error);
-        return;
+        throw new Error('Failed to delete clothing item');
       }
 
       setClothes(prev => prev.filter(item => item.id !== id));
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error deleting item:', error);
+      throw error;
     }
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!user) return null;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
     try {
+      setError(null);
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
@@ -100,24 +116,25 @@ export const useClothes = () => {
 
       if (uploadError) {
         console.error('Error uploading image:', uploadError);
-        return null;
+        throw new Error('Failed to upload image');
       }
 
-      // Get signed URL for the uploaded image
-      const { data: signedUrl } = await supabase.storage
+      // Get public URL for the uploaded image
+      const { data } = supabase.storage
         .from('clothing-images')
-        .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+        .getPublicUrl(fileName);
 
-      return signedUrl?.signedUrl || null;
+      return data.publicUrl;
     } catch (error) {
-      console.error('Error:', error);
-      return null;
+      console.error('Upload error:', error);
+      throw error;
     }
   };
 
   return {
     clothes,
     loading,
+    error,
     addClothingItem,
     deleteClothingItem,
     uploadImage,

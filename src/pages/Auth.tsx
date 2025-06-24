@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Crown, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { Crown, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,29 +23,70 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
+  const validateForm = () => {
+    if (!email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    if (!password.trim()) {
+      setError('Password is required');
+      return false;
+    }
+    if (!isLogin && password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccessMessage('');
 
     try {
       const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password);
+        ? await signIn(email.trim(), password)
+        : await signUp(email.trim(), password);
 
       if (error) {
-        setError(error.message);
+        // Handle specific error messages
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.');
+        } else if (error.message.includes('User already registered')) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please check your email and click the confirmation link before signing in.');
+        } else {
+          setError(error.message);
+        }
       } else if (!isLogin) {
         setSuccessMessage('🎉 Welcome to ClosetIQ! We\'ve sent a confirmation link to your email. Please check your inbox and click the link to activate your account.');
         setEmail('');
         setPassword('');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Auth error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    setSuccessMessage('');
   };
 
   return (
@@ -74,8 +115,11 @@ const Auth = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-red-700 text-sm leading-relaxed">{error}</p>
+              </div>
             </div>
           )}
 
@@ -103,6 +147,7 @@ const Auth = () => {
                   required
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your email"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -120,21 +165,26 @@ const Auth = () => {
                   required
                   className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {!isLogin && (
+                <p className="text-xs text-slate-500 mt-1">Password must be at least 6 characters long</p>
+              )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-violet-700 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-violet-800 transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-lg disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-indigo-600 to-violet-700 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-violet-800 transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -147,8 +197,9 @@ const Auth = () => {
           {/* Toggle Auth Mode */}
           <div className="text-center mt-6">
             <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+              onClick={toggleMode}
+              disabled={loading}
+              className="text-indigo-600 hover:text-indigo-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
