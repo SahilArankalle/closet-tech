@@ -9,7 +9,126 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      clothes: {
+        Row: {
+          category: string
+          color: string
+          created_at: string
+          id: string
+          image_url: string
+          name: string | null
+          occasion: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          color: string
+          created_at?: string
+          id?: string
+          image_url: string
+          name?: string | null
+          occasion: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          color?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string | null
+          occasion?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      occasion_plans: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          occasion_type: string
+          pant_id: string | null
+          shirt_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          occasion_type: string
+          pant_id?: string | null
+          shirt_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          occasion_type?: string
+          pant_id?: string | null
+          shirt_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occasion_plans_pant_id_fkey"
+            columns: ["pant_id"]
+            isOneToOne: false
+            referencedRelation: "clothes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "occasion_plans_shirt_id_fkey"
+            columns: ["shirt_id"]
+            isOneToOne: false
+            referencedRelation: "clothes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_plans: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          pant_id: string | null
+          shirt_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          pant_id?: string | null
+          shirt_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          pant_id?: string | null
+          shirt_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_plans_pant_id_fkey"
+            columns: ["pant_id"]
+            isOneToOne: false
+            referencedRelation: "clothes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_plans_shirt_id_fkey"
+            columns: ["shirt_id"]
+            isOneToOne: false
+            referencedRelation: "clothes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

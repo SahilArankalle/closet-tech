@@ -1,18 +1,18 @@
 
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Calendar, Filter, Plus, Crown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Calendar, Filter, Plus, Crown, LogOut, User } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useClothes } from '../hooks/useClothes';
 import WardrobeGrid from '../components/WardrobeGrid';
 import CaptureModal from '../components/CaptureModal';
 import WeeklyPlanner from '../components/WeeklyPlanner';
 import OccasionPlanner from '../components/OccasionPlanner';
 import FilterPanel from '../components/FilterPanel';
-import { ClothingItem } from '../types/wardrobe';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<'wardrobe' | 'planner' | 'occasions'>('wardrobe');
   const [showCapture, setShowCapture] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [clothingItems, setClothingItems] = useState<ClothingItem[]>([]);
   const [filters, setFilters] = useState({
     category: '',
     color: '',
@@ -20,39 +20,50 @@ const Index = () => {
     occasion: ''
   });
 
-  // Load clothing items from localStorage on component mount
-  useEffect(() => {
-    const savedItems = localStorage.getItem('clothingItems');
-    if (savedItems) {
-      setClothingItems(JSON.parse(savedItems));
-    }
-  }, []);
+  const { user, signOut } = useAuth();
+  const { clothes, loading, deleteClothingItem } = useClothes();
 
-  // Save clothing items to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('clothingItems', JSON.stringify(clothingItems));
-  }, [clothingItems]);
-
-  const addClothingItem = (item: Omit<ClothingItem, 'id'>) => {
-    const newItem: ClothingItem = {
-      ...item,
-      id: Date.now().toString()
-    };
-    setClothingItems(prev => [...prev, newItem]);
-  };
-
-  const deleteClothingItem = (id: string) => {
-    setClothingItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const filteredItems = clothingItems.filter(item => {
+  const filteredItems = clothes.filter(item => {
     return (
       (!filters.category || item.category === filters.category) &&
       (!filters.color || item.color.toLowerCase().includes(filters.color.toLowerCase())) &&
-      (!filters.season || item.season === filters.season) &&
       (!filters.occasion || item.occasion === filters.occasion)
     );
   });
+
+  // Convert Supabase clothes to legacy format for existing components
+  const legacyClothes = clothes.map(item => ({
+    id: item.id,
+    name: item.name || 'Untitled Item',
+    category: item.category,
+    color: item.color,
+    season: 'all' as const,
+    occasion: item.occasion,
+    imageUrl: item.image_url,
+    dateAdded: item.created_at,
+    material: undefined
+  }));
+
+  const filteredLegacyItems = legacyClothes.filter(item => {
+    return (
+      (!filters.category || item.category === filters.category) &&
+      (!filters.color || item.color.toLowerCase().includes(filters.color.toLowerCase())) &&
+      (!filters.occasion || item.occasion === filters.occasion)
+    );
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-3 rounded-xl shadow-lg mx-auto w-fit mb-4">
+            <Crown className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <p className="text-slate-600">Loading your wardrobe...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -73,6 +84,21 @@ const Index = () => {
             </div>
             
             <div className="flex items-center space-x-2 md:space-x-3">
+              {/* User Menu */}
+              <div className="flex items-center space-x-2">
+                <div className="hidden sm:flex items-center space-x-2 bg-slate-100 rounded-xl px-3 py-2">
+                  <User className="w-4 h-4 text-slate-600" />
+                  <span className="text-sm text-slate-700">{user?.email}</span>
+                </div>
+                <button
+                  onClick={signOut}
+                  className="p-2 md:p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors touch-manipulation"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              </div>
+
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`p-2 md:p-2.5 rounded-xl transition-all duration-200 touch-manipulation ${
@@ -141,21 +167,18 @@ const Index = () => {
             {showFilters && (
               <FilterPanel filters={filters} onFiltersChange={setFilters} />
             )}
-            <WardrobeGrid items={filteredItems} onDeleteItem={deleteClothingItem} />
+            <WardrobeGrid items={filteredLegacyItems} onDeleteItem={deleteClothingItem} />
           </div>
         ) : activeTab === 'planner' ? (
-          <WeeklyPlanner clothingItems={clothingItems} />
+          <WeeklyPlanner clothingItems={legacyClothes} />
         ) : (
-          <OccasionPlanner clothingItems={clothingItems} />
+          <OccasionPlanner clothingItems={legacyClothes} />
         )}
       </main>
 
       {/* Modals */}
       {showCapture && (
-        <CaptureModal
-          onClose={() => setShowCapture(false)}
-          onAddItem={addClothingItem}
-        />
+        <CaptureModal onClose={() => setShowCapture(false)} />
       )}
     </div>
   );
