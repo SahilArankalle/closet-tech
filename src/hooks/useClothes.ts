@@ -33,7 +33,8 @@ export const useClothes = () => {
         return;
       }
 
-      setClothes(data || []);
+      // Type assertion to ensure proper typing
+      setClothes((data as ClothingItem[]) || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -60,8 +61,9 @@ export const useClothes = () => {
         return;
       }
 
-      setClothes(prev => [data, ...prev]);
-      return data;
+      // Type assertion for the returned data
+      setClothes(prev => [(data as ClothingItem), ...prev]);
+      return data as ClothingItem;
     } catch (error) {
       console.error('Error:', error);
     }
