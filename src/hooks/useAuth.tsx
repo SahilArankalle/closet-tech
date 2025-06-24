@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -40,7 +41,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    // Use the current origin, but fallback to a placeholder if needed
+    const redirectUrl = window.location.origin === 'http://localhost:3000' 
+      ? 'https://your-app-domain.com/' 
+      : `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
       email,

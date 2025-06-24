@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Crown, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Crown, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
       const { error } = isLogin 
@@ -35,7 +37,9 @@ const Auth = () => {
       if (error) {
         setError(error.message);
       } else if (!isLogin) {
-        setError('Check your email for a confirmation link!');
+        setSuccessMessage('🎉 Welcome to ClosetIQ! We\'ve sent a confirmation link to your email. Please check your inbox and click the link to activate your account.');
+        setEmail('');
+        setPassword('');
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -72,6 +76,15 @@ const Auth = () => {
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
               <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start space-x-3">
+                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <p className="text-green-700 text-sm leading-relaxed">{successMessage}</p>
+              </div>
             </div>
           )}
 
