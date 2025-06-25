@@ -24,8 +24,7 @@ const Index = () => {
 
   // Convert Supabase clothes to legacy format for existing components
   const legacyClothes = clothes.map(item => {
-    console.log('Converting item:', item);
-    console.log('Image URL from DB:', item.image_url);
+    console.log('Converting item for display:', item.name, 'URL:', item.image_url);
     
     return {
       id: item.id,
@@ -34,7 +33,7 @@ const Index = () => {
       color: item.color,
       season: 'all' as const,
       occasion: item.occasion,
-      imageUrl: item.image_url, // Make sure this is correctly mapped
+      imageUrl: item.image_url, // This should now be a valid public URL
       dateAdded: item.created_at,
       material: undefined
     };

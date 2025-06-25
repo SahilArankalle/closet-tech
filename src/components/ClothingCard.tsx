@@ -35,19 +35,26 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
   console.log('ClothingCard item:', item);
   console.log('Image URL:', item.imageUrl);
 
+  // Check if the URL is a Supabase storage URL and make sure it's accessible
+  const isValidImageUrl = item.imageUrl && 
+    item.imageUrl.trim() !== '' && 
+    (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('https'));
+
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-slate-200/50">
       <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center relative overflow-hidden">
-        {item.imageUrl && item.imageUrl.trim() !== '' ? (
+        {isValidImageUrl ? (
           <img 
             src={item.imageUrl} 
             alt={item.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onLoad={() => console.log('Image loaded successfully')}
+            onLoad={() => console.log('Image loaded successfully for:', item.name)}
             onError={(e) => {
-              console.error('Image failed to load:', item.imageUrl);
-              console.error('Error details:', e);
+              console.error('Image failed to load for item:', item.name);
+              console.error('URL:', item.imageUrl);
+              console.error('Error event:', e);
             }}
+            crossOrigin="anonymous"
           />
         ) : (
           <div className="text-6xl opacity-40">
@@ -91,10 +98,6 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
             {item.material}
           </div>
         )}
-        {/* Debug info - remove this after testing */}
-        <div className="mt-2 text-xs text-red-500">
-          URL: {item.imageUrl ? 'Present' : 'Missing'}
-        </div>
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ export const useClothes = () => {
         return;
       }
 
+      console.log('Fetched clothes from DB:', data);
       setClothes((data as ClothingItem[]) || []);
     } catch (error) {
       console.error('Error:', error);
@@ -73,6 +74,8 @@ export const useClothes = () => {
       image_url: item.image_url.trim()
     };
 
+    console.log('Adding clothing item with image URL:', sanitizedItem.image_url);
+
     try {
       setError(null);
       const { data, error } = await supabase
@@ -89,6 +92,7 @@ export const useClothes = () => {
         throw new Error('Failed to add clothing item');
       }
 
+      console.log('Successfully added clothing item:', data);
       setClothes(prev => [(data as ClothingItem), ...prev]);
       return data as ClothingItem;
     } catch (error) {
@@ -138,6 +142,8 @@ export const useClothes = () => {
       const fileExt = file.name.split('.').pop()?.toLowerCase();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
+      console.log('Uploading image with filename:', fileName);
+
       const { error: uploadError } = await supabase.storage
         .from('clothing-images')
         .upload(fileName, file, {
@@ -157,6 +163,20 @@ export const useClothes = () => {
       const { data } = supabase.storage
         .from('clothing-images')
         .getPublicUrl(fileName);
+
+      console.log('Generated public URL:', data.publicUrl);
+      
+      // Verify the URL is accessible
+      try {
+        const response = await fetch(data.publicUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          console.error('Image URL not accessible:', response.status, response.statusText);
+        } else {
+          console.log('Image URL verified as accessible');
+        }
+      } catch (verifyError) {
+        console.error('Error verifying image URL:', verifyError);
+      }
 
       return data.publicUrl;
     } catch (error) {
