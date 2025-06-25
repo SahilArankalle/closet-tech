@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { validateClothingItem, sanitizeInput, validateImageFile } from '@/utils/inputValidation';
 
 export interface ClothingItem {
   id: string;
@@ -58,16 +59,33 @@ export const useClothes = () => {
       throw new Error('User not authenticated');
     }
 
+    // Validate input
+    const validation = validateClothingItem(item);
+    if (!validation.isValid) {
+      throw new Error(validation.errors.join(', '));
+    }
+
+    // Sanitize inputs
+    const sanitizedItem = {
+      ...item,
+      name: item.name ? sanitizeInput(item.name) : undefined,
+      color: sanitizeInput(item.color),
+      image_url: item.image_url.trim()
+    };
+
     try {
       setError(null);
       const { data, error } = await supabase
         .from('clothes')
-        .insert([{ ...item, user_id: user.id }])
+        .insert([{ ...sanitizedItem, user_id: user.id }])
         .select()
         .single();
 
       if (error) {
         console.error('Error adding clothing item:', error);
+        if (error.code === '23514') {
+          throw new Error('Invalid input data. Please check your entries.');
+        }
         throw new Error('Failed to add clothing item');
       }
 
@@ -80,13 +98,17 @@ export const useClothes = () => {
   };
 
   const deleteClothingItem = async (id: string) => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     try {
       setError(null);
       const { error } = await supabase
         .from('clothes')
         .delete()
         .eq('id', id)
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error deleting clothing item:', error);
@@ -105,17 +127,29 @@ export const useClothes = () => {
       throw new Error('User not authenticated');
     }
 
+    // Validate file before upload
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      throw new Error(validation.errors.join(', '));
+    }
+
     try {
       setError(null);
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('clothing-images')
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (uploadError) {
         console.error('Error uploading image:', uploadError);
+        if (uploadError.message.includes('Payload too large')) {
+          throw new Error('File size too large. Please use a smaller image.');
+        }
         throw new Error('Failed to upload image');
       }
 

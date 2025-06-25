@@ -23,55 +23,36 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (!password.trim()) {
-      setError('Password is required');
-      return false;
-    }
-    if (!isLogin && password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
-
     setLoading(true);
     setError('');
     setSuccessMessage('');
 
     try {
       const { error } = isLogin 
-        ? await signIn(email.trim(), password)
-        : await signUp(email.trim(), password);
+        ? await signIn(email, password)
+        : await signUp(email, password);
 
       if (error) {
-        // Handle specific error messages
+        // Handle specific error messages with user-friendly text
         if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please check your credentials and try again.');
         } else if (error.message.includes('User already registered')) {
           setError('An account with this email already exists. Please sign in instead.');
         } else if (error.message.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before signing in.');
+        } else if (error.message.includes('signup_disabled')) {
+          setError('New signups are currently disabled. Please contact support.');
+        } else if (error.message.includes('rate_limit')) {
+          setError('Too many attempts. Please wait a moment before trying again.');
         } else {
           setError(error.message);
         }
       } else if (!isLogin) {
         setSuccessMessage('🎉 Welcome to ClosetIQ! We\'ve sent a confirmation link to your email. Please check your inbox and click the link to activate your account.');
+        // Clear form on successful signup
         setEmail('');
         setPassword('');
       }
@@ -145,9 +126,11 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  maxLength={254}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your email"
                   disabled={loading}
+                  autoComplete={isLogin ? "email" : "username"}
                 />
               </div>
             </div>
@@ -163,9 +146,11 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  maxLength={128}
                   className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your password"
                   disabled={loading}
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
                 <button
                   type="button"

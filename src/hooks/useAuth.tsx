@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getSecureRedirectUrl, validateAuthInput } from '@/utils/secureAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -23,7 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -41,13 +42,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    // Use the current origin, but fallback to a placeholder if needed
-    const redirectUrl = window.location.origin === 'http://localhost:3000' 
-      ? 'https://your-app-domain.com/' 
-      : `${window.location.origin}/`;
+    // Validate inputs
+    const validation = validateAuthInput(email, password);
+    if (!validation.isValid) {
+      return { error: { message: validation.errors.join(', ') } };
+    }
+
+    const redirectUrl = getSecureRedirectUrl();
     
     const { error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       options: {
         emailRedirectTo: redirectUrl
@@ -57,8 +61,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Validate inputs
+    const validation = validateAuthInput(email, password);
+    if (!validation.isValid) {
+      return { error: { message: validation.errors.join(', ') } };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password
     });
     return { error };
