@@ -31,14 +31,23 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
     }
   };
 
+  // Debug logging to help identify the issue
+  console.log('ClothingCard item:', item);
+  console.log('Image URL:', item.imageUrl);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-slate-200/50">
       <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center relative overflow-hidden">
-        {item.imageUrl ? (
+        {item.imageUrl && item.imageUrl.trim() !== '' ? (
           <img 
             src={item.imageUrl} 
             alt={item.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onLoad={() => console.log('Image loaded successfully')}
+            onError={(e) => {
+              console.error('Image failed to load:', item.imageUrl);
+              console.error('Error details:', e);
+            }}
           />
         ) : (
           <div className="text-6xl opacity-40">
@@ -82,6 +91,10 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
             {item.material}
           </div>
         )}
+        {/* Debug info - remove this after testing */}
+        <div className="mt-2 text-xs text-red-500">
+          URL: {item.imageUrl ? 'Present' : 'Missing'}
+        </div>
       </div>
     </div>
   );

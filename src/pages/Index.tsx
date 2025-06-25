@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Sparkles, Calendar, Filter, Plus, Crown, LogOut, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -23,26 +22,23 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const { clothes, loading, error, deleteClothingItem } = useClothes();
 
-  const filteredItems = clothes.filter(item => {
-    return (
-      (!filters.category || item.category === filters.category) &&
-      (!filters.color || item.color.toLowerCase().includes(filters.color.toLowerCase())) &&
-      (!filters.occasion || item.occasion === filters.occasion)
-    );
-  });
-
   // Convert Supabase clothes to legacy format for existing components
-  const legacyClothes = clothes.map(item => ({
-    id: item.id,
-    name: item.name || 'Untitled Item',
-    category: item.category,
-    color: item.color,
-    season: 'all' as const,
-    occasion: item.occasion,
-    imageUrl: item.image_url,
-    dateAdded: item.created_at,
-    material: undefined
-  }));
+  const legacyClothes = clothes.map(item => {
+    console.log('Converting item:', item);
+    console.log('Image URL from DB:', item.image_url);
+    
+    return {
+      id: item.id,
+      name: item.name || 'Untitled Item',
+      category: item.category,
+      color: item.color,
+      season: 'all' as const,
+      occasion: item.occasion,
+      imageUrl: item.image_url, // Make sure this is correctly mapped
+      dateAdded: item.created_at,
+      material: undefined
+    };
+  });
 
   const filteredLegacyItems = legacyClothes.filter(item => {
     return (
