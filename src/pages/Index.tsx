@@ -23,22 +23,27 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const { clothes, loading, error, deleteClothingItem } = useClothes();
 
+  console.log('Index: Raw clothes data from DB:', clothes);
+
   // Convert Supabase clothes to legacy format for existing components
   const legacyClothes = clothes.map(item => {
-    console.log('Converting item for display:', item.name, 'URL:', item.image_url);
-    
-    return {
+    const legacyItem = {
       id: item.id,
       name: item.name || 'Untitled Item',
       category: item.category,
       color: item.color,
       season: 'all' as const,
       occasion: item.occasion,
-      imageUrl: item.image_url,
+      imageUrl: item.image_url, // Direct mapping without modification
       dateAdded: item.created_at,
       material: undefined
     };
+    
+    console.log('Index: Converting item:', item.name, 'Original URL:', item.image_url, 'Mapped URL:', legacyItem.imageUrl);
+    return legacyItem;
   });
+
+  console.log('Index: Legacy clothes for display:', legacyClothes);
 
   const filteredLegacyItems = legacyClothes.filter(item => {
     return (
@@ -51,10 +56,16 @@ const Index = () => {
   const handleDeleteItem = async (id: string) => {
     try {
       await deleteClothingItem(id);
+      console.log('Index: Successfully deleted item:', id);
     } catch (error) {
-      console.error('Failed to delete item:', error);
+      console.error('Index: Failed to delete item:', error);
       alert('Failed to delete item. Please try again.');
     }
+  };
+
+  const handleCaptureClose = () => {
+    console.log('Index: Capture modal closed');
+    setShowCapture(false);
   };
 
   if (loading) {
@@ -89,7 +100,7 @@ const Index = () => {
       />
 
       {showCapture && (
-        <CaptureModal onClose={() => setShowCapture(false)} />
+        <CaptureModal onClose={handleCaptureClose} />
       )}
     </div>
   );

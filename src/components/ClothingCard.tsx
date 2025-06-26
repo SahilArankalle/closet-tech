@@ -31,41 +31,28 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
     }
   };
 
-  // Debug logging to help identify the issue
-  console.log('ClothingCard item:', item);
-  console.log('Image URL:', item.imageUrl);
+  console.log('ClothingCard rendering item:', item.name, 'Image URL:', item.imageUrl);
 
   // Check if the URL is a valid image URL
   const isValidImageUrl = item.imageUrl && 
     item.imageUrl.trim() !== '' && 
     (item.imageUrl.startsWith('http') || item.imageUrl.startsWith('https'));
 
-  // Add cache busting parameter to force image reload
-  const imageUrlWithCache = isValidImageUrl ? `${item.imageUrl}?t=${Date.now()}` : '';
-
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group cursor-pointer border border-slate-200/50">
       <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center relative overflow-hidden">
         {isValidImageUrl ? (
           <img 
-            src={imageUrlWithCache} 
+            src={item.imageUrl} 
             alt={item.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onLoad={() => {
-              console.log('Image loaded successfully for:', item.name);
-              console.log('Loaded URL:', imageUrlWithCache);
+              console.log('ClothingCard: Image loaded successfully for:', item.name);
             }}
             onError={(e) => {
-              console.error('Image failed to load for item:', item.name);
-              console.error('URL:', item.imageUrl);
-              console.error('URL with cache:', imageUrlWithCache);
-              console.error('Error event:', e);
-              // Try to load without cache busting as fallback
-              const img = e.target as HTMLImageElement;
-              if (img.src.includes('?t=')) {
-                console.log('Retrying without cache busting...');
-                img.src = item.imageUrl;
-              }
+              console.error('ClothingCard: Image failed to load for item:', item.name);
+              console.error('ClothingCard: Image URL:', item.imageUrl);
+              console.error('ClothingCard: Error event:', e);
             }}
           />
         ) : (

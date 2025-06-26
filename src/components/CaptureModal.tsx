@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
@@ -24,7 +23,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     occasion: 'casual' as const
   });
 
-  const { addClothingItem, uploadImage, refetch } = useClothes();
+  const { addClothingItem, uploadImage } = useClothes();
 
   const startCamera = async () => {
     try {
@@ -90,11 +89,14 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
     setLoading(true);
     try {
+      console.log('CaptureModal: Starting save process...');
+      
       // Convert cropped image to blob
       const response = await fetch(croppedImage);
       const blob = await response.blob();
       const file = new File([blob], 'clothing-item.jpg', { type: 'image/jpeg' });
 
+      console.log('CaptureModal: Uploading image...');
       // Upload to Supabase storage
       const imageUrl = await uploadImage(file);
       if (!imageUrl) {
@@ -102,9 +104,9 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         return;
       }
 
-      console.log('Uploaded image URL:', imageUrl);
+      console.log('CaptureModal: Image uploaded successfully:', imageUrl);
 
-      // Save clothing item to database
+      // Save clothing item to database - the hook will handle state updates
       const newItem = await addClothingItem({
         name: formData.name || 'Untitled Item',
         category: formData.category,
@@ -113,18 +115,13 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         image_url: imageUrl
       });
 
-      console.log('Successfully added item:', newItem);
-
-      // Force refresh the clothes list to show the new item immediately
-      setTimeout(async () => {
-        await refetch();
-        console.log('Refreshed clothes list after adding item');
-      }, 500);
+      console.log('CaptureModal: Item saved successfully:', newItem);
       
+      // Close modal immediately - no need for setTimeout
       onClose();
     } catch (error) {
-      console.error('Error saving item:', error);
-      alert('Failed to save item');
+      console.error('CaptureModal: Error saving item:', error);
+      alert('Failed to save item: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
