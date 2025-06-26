@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
@@ -35,7 +36,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (error) {
-      console.error('Error accessing camera:', error);
+      console.error('CaptureModal: Error accessing camera:', error);
     }
   };
 
@@ -94,19 +95,18 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
       // Convert cropped image to blob
       const response = await fetch(croppedImage);
       const blob = await response.blob();
-      const file = new File([blob], 'clothing-item.jpg', { type: 'image/jpeg' });
+      const file = new File([blob], `clothing-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
       console.log('CaptureModal: Uploading image...');
       // Upload to Supabase storage
       const imageUrl = await uploadImage(file);
       if (!imageUrl) {
-        alert('Failed to upload image');
-        return;
+        throw new Error('Failed to upload image');
       }
 
       console.log('CaptureModal: Image uploaded successfully:', imageUrl);
 
-      // Save clothing item to database - the hook will handle state updates
+      // Save clothing item to database
       const newItem = await addClothingItem({
         name: formData.name || 'Untitled Item',
         category: formData.category,
@@ -117,7 +117,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
       console.log('CaptureModal: Item saved successfully:', newItem);
       
-      // Close modal immediately - no need for setTimeout
+      // Close modal
       onClose();
     } catch (error) {
       console.error('CaptureModal: Error saving item:', error);

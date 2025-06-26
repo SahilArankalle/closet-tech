@@ -23,27 +23,22 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const { clothes, loading, error, deleteClothingItem } = useClothes();
 
-  console.log('Index: Raw clothes data from DB:', clothes);
+  console.log('Index: Clothes from useClothes hook:', clothes);
 
-  // Convert Supabase clothes to legacy format for existing components
-  const legacyClothes = clothes.map(item => {
-    const legacyItem = {
-      id: item.id,
-      name: item.name || 'Untitled Item',
-      category: item.category,
-      color: item.color,
-      season: 'all' as const,
-      occasion: item.occasion,
-      imageUrl: item.image_url, // Direct mapping without modification
-      dateAdded: item.created_at,
-      material: undefined
-    };
-    
-    console.log('Index: Converting item:', item.name, 'Original URL:', item.image_url, 'Mapped URL:', legacyItem.imageUrl);
-    return legacyItem;
-  });
+  // Convert to legacy format for existing components
+  const legacyClothes = clothes.map(item => ({
+    id: item.id,
+    name: item.name || 'Untitled Item',
+    category: item.category,
+    color: item.color,
+    season: 'all' as const,
+    occasion: item.occasion,
+    imageUrl: item.image_url,
+    dateAdded: item.created_at,
+    material: undefined
+  }));
 
-  console.log('Index: Legacy clothes for display:', legacyClothes);
+  console.log('Index: Legacy format clothes:', legacyClothes);
 
   const filteredLegacyItems = legacyClothes.filter(item => {
     return (

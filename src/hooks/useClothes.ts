@@ -23,13 +23,14 @@ export const useClothes = () => {
 
   const fetchClothes = async () => {
     if (!user) {
+      setClothes([]);
       setLoading(false);
       return;
     }
     
     try {
       setError(null);
-      console.log('Fetching clothes for user:', user.id);
+      console.log('useClothes: Fetching clothes for user:', user.id);
       
       const { data, error } = await supabase
         .from('clothes')
@@ -38,15 +39,44 @@ export const useClothes = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching clothes:', error);
+        console.error('useClothes: Error fetching clothes:', error);
         setError('Failed to fetch clothing items');
         return;
       }
 
-      console.log('Fetched clothes from DB:', data);
-      setClothes((data as ClothingItem[]) || []);
+      console.log('useClothes: Raw data from database:', data);
+      
+      // Process image URLs to ensure they're accessible
+      const processedClothes = (data as ClothingItem[]).map(item => {
+        let processedImageUrl = item.image_url;
+        
+        // If the image URL doesn't start with https, it might be a storage path
+        if (processedImageUrl && !processedImageUrl.startsWith('https://')) {
+          // Extract the file path from the full URL if needed
+          const urlParts = processedImageUrl.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const userPath = urlParts[urlParts.length - 2];
+          
+          if (userPath && fileName) {
+            const { data: urlData } = supabase.storage
+              .from('clothing-images')
+              .getPublicUrl(`${userPath}/${fileName}`);
+            processedImageUrl = urlData.publicUrl;
+          }
+        }
+        
+        console.log('useClothes: Processing item:', item.name, 'Original URL:', item.image_url, 'Processed URL:', processedImageUrl);
+        
+        return {
+          ...item,
+          image_url: processedImageUrl
+        };
+      });
+
+      setClothes(processedClothes);
+      console.log('useClothes: Final processed clothes:', processedClothes);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('useClothes: Unexpected error:', error);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -76,7 +106,7 @@ export const useClothes = () => {
       image_url: item.image_url.trim()
     };
 
-    console.log('Adding clothing item with image URL:', sanitizedItem.image_url);
+    console.log('useClothes: Adding clothing item:', sanitizedItem);
 
     try {
       setError(null);
@@ -87,22 +117,43 @@ export const useClothes = () => {
         .single();
 
       if (error) {
-        console.error('Error adding clothing item:', error);
+        console.error('useClothes: Error adding clothing item:', error);
         if (error.code === '23514') {
           throw new Error('Invalid input data. Please check your entries.');
         }
         throw new Error('Failed to add clothing item');
       }
 
-      console.log('Successfully added clothing item:', data);
+      console.log('useClothes: Successfully added clothing item:', data);
       
-      // Immediately update the local state to show the new item
-      const newClothingItem = data as ClothingItem;
-      setClothes(prev => [newClothingItem, ...prev]);
+      // Process the image URL for the new item
+      const newItem = data as ClothingItem;
+      let processedImageUrl = newItem.image_url;
       
-      return newClothingItem;
+      if (processedImageUrl && !processedImageUrl.startsWith('https://')) {
+        const urlParts = processedImageUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const userPath = urlParts[urlParts.length - 2];
+        
+        if (userPath && fileName) {
+          const { data: urlData } = supabase.storage
+            .from('clothing-images')
+            .getPublicUrl(`${userPath}/${fileName}`);
+          processedImageUrl = urlData.publicUrl;
+        }
+      }
+      
+      const processedNewItem = {
+        ...newItem,
+        image_url: processedImageUrl
+      };
+      
+      // Add to local state immediately
+      setClothes(prev => [processedNewItem, ...prev]);
+      
+      return processedNewItem;
     } catch (error) {
-      console.error('Error adding item:', error);
+      console.error('useClothes: Error adding item:', error);
       throw error;
     }
   };
@@ -114,6 +165,10 @@ export const useClothes = () => {
 
     try {
       setError(null);
+      
+      // Find the item to get its image URL for cleanup
+      const itemToDelete = clothes.find(item => item.id === id);
+      
       const { error } = await supabase
         .from('clothes')
         .delete()
@@ -121,13 +176,31 @@ export const useClothes = () => {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('Error deleting clothing item:', error);
+        console.error('useClothes: Error deleting clothing item:', error);
         throw new Error('Failed to delete clothing item');
       }
 
+      // Remove from local state immediately
       setClothes(prev => prev.filter(item => item.id !== id));
+      
+      // Optional: Clean up the image from storage
+      if (itemToDelete?.image_url) {
+        try {
+          const urlParts = itemToDelete.image_url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const userPath = urlParts[urlParts.length - 2];
+          
+          if (userPath && fileName) {
+            await supabase.storage
+              .from('clothing-images')
+              .remove([`${userPath}/${fileName}`]);
+          }
+        } catch (cleanupError) {
+          console.warn('useClothes: Failed to cleanup image:', cleanupError);
+        }
+      }
     } catch (error) {
-      console.error('Error deleting item:', error);
+      console.error('useClothes: Error deleting item:', error);
       throw error;
     }
   };
@@ -148,7 +221,7 @@ export const useClothes = () => {
       const fileExt = file.name.split('.').pop()?.toLowerCase();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      console.log('Uploading image with filename:', fileName);
+      console.log('useClothes: Uploading image with filename:', fileName);
 
       const { error: uploadError } = await supabase.storage
         .from('clothing-images')
@@ -158,7 +231,7 @@ export const useClothes = () => {
         });
 
       if (uploadError) {
-        console.error('Error uploading image:', uploadError);
+        console.error('useClothes: Error uploading image:', uploadError);
         if (uploadError.message.includes('Payload too large')) {
           throw new Error('File size too large. Please use a smaller image.');
         }
@@ -170,23 +243,11 @@ export const useClothes = () => {
         .from('clothing-images')
         .getPublicUrl(fileName);
 
-      console.log('Generated public URL:', data.publicUrl);
+      console.log('useClothes: Generated public URL:', data.publicUrl);
       
-      // Verify the URL is accessible
-      try {
-        const response = await fetch(data.publicUrl, { method: 'HEAD' });
-        if (!response.ok) {
-          console.error('Image URL not accessible:', response.status, response.statusText);
-        } else {
-          console.log('Image URL verified as accessible');
-        }
-      } catch (verifyError) {
-        console.error('Error verifying image URL:', verifyError);
-      }
-
       return data.publicUrl;
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('useClothes: Upload error:', error);
       throw error;
     }
   };
