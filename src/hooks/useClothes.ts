@@ -29,6 +29,8 @@ export const useClothes = () => {
     
     try {
       setError(null);
+      console.log('Fetching clothes for user:', user.id);
+      
       const { data, error } = await supabase
         .from('clothes')
         .select('*')
@@ -93,8 +95,12 @@ export const useClothes = () => {
       }
 
       console.log('Successfully added clothing item:', data);
-      setClothes(prev => [(data as ClothingItem), ...prev]);
-      return data as ClothingItem;
+      
+      // Immediately update the local state to show the new item
+      const newClothingItem = data as ClothingItem;
+      setClothes(prev => [newClothingItem, ...prev]);
+      
+      return newClothingItem;
     } catch (error) {
       console.error('Error adding item:', error);
       throw error;

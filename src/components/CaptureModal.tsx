@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
@@ -101,8 +102,10 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         return;
       }
 
+      console.log('Uploaded image URL:', imageUrl);
+
       // Save clothing item to database
-      await addClothingItem({
+      const newItem = await addClothingItem({
         name: formData.name || 'Untitled Item',
         category: formData.category,
         color: formData.color,
@@ -110,8 +113,13 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         image_url: imageUrl
       });
 
-      // Refresh the clothes list to show the new item immediately
-      await refetch();
+      console.log('Successfully added item:', newItem);
+
+      // Force refresh the clothes list to show the new item immediately
+      setTimeout(async () => {
+        await refetch();
+        console.log('Refreshed clothes list after adding item');
+      }, 500);
       
       onClose();
     } catch (error) {
