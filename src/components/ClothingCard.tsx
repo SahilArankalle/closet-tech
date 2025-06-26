@@ -54,7 +54,6 @@ const ClothingCard: React.FC<ClothingCardProps> = ({ item, onDelete }) => {
               console.error('URL:', item.imageUrl);
               console.error('Error event:', e);
             }}
-            crossOrigin="anonymous"
           />
         ) : (
           <div className="text-6xl opacity-40">

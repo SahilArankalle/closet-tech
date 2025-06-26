@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
@@ -24,7 +23,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     occasion: 'casual' as const
   });
 
-  const { addClothingItem, uploadImage } = useClothes();
+  const { addClothingItem, uploadImage, refetch } = useClothes();
 
   const startCamera = async () => {
     try {
@@ -111,6 +110,9 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
         image_url: imageUrl
       });
 
+      // Refresh the clothes list to show the new item immediately
+      await refetch();
+      
       onClose();
     } catch (error) {
       console.error('Error saving item:', error);
