@@ -23,7 +23,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     occasion: 'casual' as const
   });
 
-  const { addClothingItem, uploadImage } = useClothes();
+  const { addClothingItem, uploadImage, refetch } = useClothes();
 
   const startCamera = async () => {
     try {
@@ -116,7 +116,12 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
       console.log('CaptureModal: Item saved successfully:', newItem);
       
-      // Close modal immediately - the addClothingItem already updates the local state
+      // Force refresh the clothes list to ensure UI updates
+      console.log('CaptureModal: Triggering clothes list refresh...');
+      await refetch();
+      console.log('CaptureModal: Clothes list refreshed successfully');
+      
+      // Close modal
       onClose();
     } catch (error) {
       console.error('CaptureModal: Error saving item:', error);
@@ -267,8 +272,8 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
                     <option value="casual">Casual</option>
                     <option value="formal">Formal</option>
                     <option value="business">Business</option>
-                    <option value="sport">Sport</option>
                     <option value="party">Party</option>
+                    <option value="sport">Sport</option>
                   </select>
                 </div>
               </div>
