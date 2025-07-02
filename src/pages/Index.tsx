@@ -50,6 +50,7 @@ const Index = () => {
 
   const handleDeleteItem = async (id: string) => {
     try {
+      console.log('Index: Attempting to delete item:', id);
       await deleteClothingItem(id);
       console.log('Index: Successfully deleted item:', id);
     } catch (error) {
