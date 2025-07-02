@@ -98,21 +98,21 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
       const file = new File([blob], `clothing-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
       console.log('CaptureModal: Uploading image...');
-      // Upload to Supabase storage
-      const imageUrl = await uploadImage(file);
-      if (!imageUrl) {
+      // Upload to Supabase storage - this now returns the file path
+      const filePath = await uploadImage(file);
+      if (!filePath) {
         throw new Error('Failed to upload image');
       }
 
-      console.log('CaptureModal: Image uploaded successfully:', imageUrl);
+      console.log('CaptureModal: Image uploaded successfully with path:', filePath);
 
-      // Save clothing item to database
+      // Save clothing item to database with the file path
       const newItem = await addClothingItem({
         name: formData.name || 'Untitled Item',
         category: formData.category,
         color: formData.color,
         occasion: formData.occasion,
-        image_url: imageUrl
+        image_url: filePath // Store the file path, not the URL
       });
 
       console.log('CaptureModal: Item saved successfully:', newItem);
