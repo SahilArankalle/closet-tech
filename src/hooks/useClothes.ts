@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -26,50 +25,48 @@ export const useClothes = () => {
     try {
       console.log('useClothes: Generating signed URL for path:', filePath);
       
+      // Clean the file path - remove any existing URL parts
+      let cleanPath = filePath;
+      
+      // If it's already a signed URL, extract just the file path
+      if (filePath.includes('/storage/v1/object/sign/clothing-images/')) {
+        const pathMatch = filePath.match(/clothing-images\/(.+?)\?/);
+        if (pathMatch) {
+          cleanPath = pathMatch[1];
+        }
+      }
+      
+      // If it's a public URL, extract the path
+      if (filePath.includes('/storage/v1/object/public/clothing-images/')) {
+        const pathMatch = filePath.match(/clothing-images\/(.+)$/);
+        if (pathMatch) {
+          cleanPath = pathMatch[1];
+        }
+      }
+      
+      // If it already contains the user ID path, use as is
+      if (!cleanPath.includes('/') && user) {
+        cleanPath = `${user.id}/${cleanPath}`;
+      }
+
+      console.log('useClothes: Clean path for signed URL:', cleanPath);
+
       const { data, error } = await supabase.storage
         .from('clothing-images')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 days expiry
+        .createSignedUrl(cleanPath, 60 * 60 * 24 * 30); // 30 days expiry
 
       if (error) {
         console.error('useClothes: Error generating signed URL:', error);
-        return filePath; // Return original path as fallback
+        // Return a fallback URL or the original path
+        return filePath;
       }
 
       console.log('useClothes: Generated signed URL:', data.signedUrl);
       return data.signedUrl;
     } catch (error) {
       console.error('useClothes: Unexpected error generating signed URL:', error);
-      return filePath; // Return original path as fallback
+      return filePath;
     }
-  };
-
-  // Helper function to extract file path from URL
-  const extractFilePath = (url: string): string => {
-    if (!url) return '';
-    
-    // If it's already a signed URL, extract the path from it
-    if (url.includes('/storage/v1/object/sign/clothing-images/')) {
-      const pathMatch = url.match(/clothing-images\/(.+?)\?/);
-      if (pathMatch) {
-        return pathMatch[1];
-      }
-    }
-    
-    // If it's a public URL, extract the path
-    if (url.includes('/storage/v1/object/public/clothing-images/')) {
-      const pathMatch = url.match(/clothing-images\/(.+)$/);
-      if (pathMatch) {
-        return pathMatch[1];
-      }
-    }
-    
-    // If it's just a file path
-    if (url.includes('/')) {
-      const parts = url.split('/');
-      return parts[parts.length - 1];
-    }
-    
-    return url;
   };
 
   const fetchClothes = async () => {
@@ -97,21 +94,20 @@ export const useClothes = () => {
 
       console.log('useClothes: Raw data from database:', data);
       
-      // Process image URLs to generate signed URLs
+      // Process image URLs to generate signed URLs for ALL items
       const processedClothes = await Promise.all(
         (data as ClothingItem[]).map(async (item) => {
-          const filePath = extractFilePath(item.image_url);
-          console.log('useClothes: Processing item:', item.name, 'File path:', filePath);
+          console.log('useClothes: Processing item:', item.name, 'Original image_url:', item.image_url);
           
-          if (filePath) {
-            const signedUrl = await getSignedUrl(filePath);
-            return {
-              ...item,
-              image_url: signedUrl
-            };
-          }
+          // Always try to generate a signed URL
+          const signedUrl = await getSignedUrl(item.image_url);
           
-          return item;
+          console.log('useClothes: Final signed URL for', item.name, ':', signedUrl);
+          
+          return {
+            ...item,
+            image_url: signedUrl
+          };
         })
       );
 
@@ -170,13 +166,14 @@ export const useClothes = () => {
       
       // Generate signed URL for the new item
       const newItem = data as ClothingItem;
-      const filePath = extractFilePath(newItem.image_url);
-      const signedUrl = await getSignedUrl(filePath);
+      const signedUrl = await getSignedUrl(newItem.image_url);
       
       const processedNewItem = {
         ...newItem,
         image_url: signedUrl
       };
+      
+      console.log('useClothes: New item with signed URL:', processedNewItem);
       
       // Add to local state immediately
       setClothes(prev => [processedNewItem, ...prev]);
@@ -216,8 +213,16 @@ export const useClothes = () => {
       // Optional: Clean up the image from storage
       if (itemToDelete?.image_url) {
         try {
-          const filePath = extractFilePath(itemToDelete.image_url);
-          if (filePath) {
+          // Extract the file path from the signed URL or use as-is
+          let filePath = itemToDelete.image_url;
+          if (filePath.includes('/storage/v1/object/sign/clothing-images/')) {
+            const pathMatch = filePath.match(/clothing-images\/(.+?)\?/);
+            if (pathMatch) {
+              filePath = pathMatch[1];
+            }
+          }
+          
+          if (filePath && !filePath.includes('http')) {
             await supabase.storage
               .from('clothing-images')
               .remove([filePath]);
@@ -267,7 +272,7 @@ export const useClothes = () => {
 
       console.log('useClothes: Image uploaded successfully, returning file path:', fileName);
       
-      // Return the file path, not the URL - we'll generate signed URLs when needed
+      // Return the file path - we'll generate signed URLs when fetching
       return fileName;
     } catch (error) {
       console.error('useClothes: Upload error:', error);
