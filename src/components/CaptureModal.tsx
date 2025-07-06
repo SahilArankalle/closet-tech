@@ -116,12 +116,15 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
       console.log('CaptureModal: Item saved successfully:', newItem);
       
-      // Force refresh the clothes list to ensure UI updates
+      // Force refresh the clothes list and wait for it to complete
       console.log('CaptureModal: Triggering clothes list refresh...');
       await refetch();
       console.log('CaptureModal: Clothes list refreshed successfully');
       
-      // Close modal
+      // Add a small delay to ensure UI has time to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Close modal after ensuring refresh is complete
       onClose();
     } catch (error) {
       console.error('CaptureModal: Error saving item:', error);

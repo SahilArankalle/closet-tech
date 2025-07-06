@@ -60,7 +60,7 @@ const Index = () => {
   };
 
   const handleCaptureClose = () => {
-    console.log('Index: Capture modal closed');
+    console.log('Index: Capture modal closed, UI should now show updated items');
     setShowCapture(false);
   };
 
