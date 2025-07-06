@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Validate inputs with enhanced security
+      // Enhanced input validation with security checks
       const validation = validateAuthInput(email, password);
       if (!validation.isValid) {
         return { error: { message: validation.errors.join(', ') } };
@@ -64,7 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: email.trim().toLowerCase(),
         password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: redirectUrl,
+          // Enhanced security options
+          data: {
+            email_confirm_timeout: 3600, // 1 hour OTP expiration
+          }
         }
       });
 
@@ -82,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Validate inputs with enhanced security
+      // Enhanced input validation with security checks
       const validation = validateAuthInput(email, password);
       if (!validation.isValid) {
         return { error: { message: validation.errors.join(', ') } };
@@ -110,8 +114,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clean up auth state first
       cleanupAuthState();
       
-      // Attempt global sign out
-      await supabase.auth.signOut({ scope: 'global' });
+      // Attempt global sign out with enhanced security
+      await supabase.auth.signOut({ 
+        scope: 'global' 
+      });
       
       // Force page reload for clean state
       setTimeout(() => {

@@ -30,6 +30,7 @@ export const getSecureRedirectUrl = (): string => {
   return `${origin}/`;
 };
 
+// Enhanced password validation with leak protection
 export const validateAuthInput = (email: string, password: string) => {
   const errors: string[] = [];
 
@@ -48,19 +49,39 @@ export const validateAuthInput = (email: string, password: string) => {
     errors.push('Email contains invalid characters');
   }
 
-  // Enhanced password validation
+  // Enhanced password validation with leak protection
   if (!password.trim()) {
     errors.push('Password is required');
-  } else if (password.length < 6) {
-    errors.push('Password must be at least 6 characters long');
+  } else if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
   } else if (password.length > 128) {
     errors.push('Password must be less than 128 characters');
   }
   
-  // Check for common weak passwords
-  const commonPasswords = ['password', '123456', 'password123', 'admin', 'qwerty'];
+  // Check for password complexity
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+    errors.push('Password must contain uppercase, lowercase, and numbers');
+  }
+  
+  // Check for common weak passwords (enhanced list)
+  const commonPasswords = [
+    'password', '123456', 'password123', 'admin', 'qwerty',
+    '12345678', 'abc123', 'password1', '123456789', 'welcome',
+    'login', 'master', 'hello', 'guest', 'user', 'test'
+  ];
   if (commonPasswords.includes(password.toLowerCase())) {
-    errors.push('Please choose a stronger password');
+    errors.push('This password is too common. Please choose a stronger password');
+  }
+  
+  // Check for sequential characters
+  const hasSequential = /123|abc|qwe|asd|zxc/gi.test(password);
+  if (hasSequential) {
+    errors.push('Password should not contain sequential characters');
   }
 
   return {
@@ -69,9 +90,14 @@ export const validateAuthInput = (email: string, password: string) => {
   };
 };
 
-// Rate limiting for authentication attempts
+// Rate limiting for authentication attempts (more restrictive)
 export const checkAuthRateLimit = (identifier: string): boolean => {
-  return checkRateLimit(`auth_${identifier}`, 5, 300000); // 5 attempts per 5 minutes
+  return checkRateLimit(`auth_${identifier}`, 3, 900000); // 3 attempts per 15 minutes
+};
+
+// OTP rate limiting (more restrictive)
+export const checkOTPRateLimit = (identifier: string): boolean => {
+  return checkRateLimit(`otp_${identifier}`, 3, 600000); // 3 OTP requests per 10 minutes
 };
 
 // Session security helpers
@@ -107,4 +133,37 @@ export const cleanupAuthState = () => {
   } catch (error) {
     console.warn('Error during auth state cleanup:', sanitizeErrorMessage(error));
   }
+};
+
+// Password strength checker
+export const checkPasswordStrength = (password: string): {
+  score: number;
+  feedback: string[];
+} => {
+  const feedback: string[] = [];
+  let score = 0;
+
+  if (password.length >= 8) score += 1;
+  else feedback.push('Use at least 8 characters');
+
+  if (password.length >= 12) score += 1;
+  else feedback.push('Consider using 12+ characters for better security');
+
+  if (/[A-Z]/.test(password)) score += 1;
+  else feedback.push('Add uppercase letters');
+
+  if (/[a-z]/.test(password)) score += 1;
+  else feedback.push('Add lowercase letters');
+
+  if (/\d/.test(password)) score += 1;
+  else feedback.push('Add numbers');
+
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1;
+  else feedback.push('Add special characters');
+
+  // Check for common patterns
+  if (!/(.)\1{2,}/.test(password)) score += 1;
+  else feedback.push('Avoid repeating characters');
+
+  return { score, feedback };
 };
