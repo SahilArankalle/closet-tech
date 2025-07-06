@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
@@ -124,6 +125,9 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
       // Add a small delay to ensure UI has time to update
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Stop camera before closing modal
+      stopCamera();
+      
       // Close modal after ensuring refresh is complete
       onClose();
     } catch (error) {
@@ -134,12 +138,23 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     }
   };
 
+  const handleClose = () => {
+    // Stop camera when closing modal
+    stopCamera();
+    onClose();
+  };
+
   React.useEffect(() => {
     if (step === 'capture') {
       startCamera();
     }
     return () => stopCamera();
   }, [step]);
+
+  // Cleanup camera when component unmounts
+  React.useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -152,7 +167,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
             {step === 'details' && 'Item Details'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5 text-slate-600" />
