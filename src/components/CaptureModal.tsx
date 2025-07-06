@@ -3,6 +3,8 @@ import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Loader2 } from 'lucide-react';
 import { useClothes } from '../hooks/useClothes';
 import ImageCropper from './ImageCropper';
+import { sanitizeInput } from '../utils/inputValidation';
+import { sanitizeFileName } from '../utils/security';
 
 interface CaptureModalProps {
   onClose: () => void;
@@ -68,6 +70,25 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Enhanced file validation
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only JPEG, PNG, and WebP images are allowed');
+      return;
+    }
+
+    // Check for suspicious file names
+    if (/[<>:"\\|?*]/g.test(file.name)) {
+      alert('File name contains invalid characters');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageUrl = e.target?.result as string;
@@ -83,8 +104,23 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
   };
 
   const handleSave = async () => {
-    if (!croppedImage || !formData.color.trim()) {
+    // Sanitize and validate inputs
+    const sanitizedName = formData.name ? sanitizeInput(formData.name) : '';
+    const sanitizedColor = sanitizeInput(formData.color);
+
+    if (!croppedImage || !sanitizedColor.trim()) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    // Additional validation
+    if (sanitizedColor.length > 50) {
+      alert('Color name is too long');
+      return;
+    }
+
+    if (sanitizedName && sanitizedName.length > 100) {
+      alert('Item name is too long');
       return;
     }
 
@@ -92,10 +128,17 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
     try {
       console.log('CaptureModal: Starting save process...');
       
-      // Convert cropped image to blob
+      // Convert cropped image to blob with security checks
       const response = await fetch(croppedImage);
       const blob = await response.blob();
-      const file = new File([blob], `clothing-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Validate blob size
+      if (blob.size > 10 * 1024 * 1024) {
+        throw new Error('Processed image is too large');
+      }
+
+      const sanitizedFileName = sanitizeFileName(`clothing-${Date.now()}.jpg`);
+      const file = new File([blob], sanitizedFileName, { type: 'image/jpeg' });
 
       console.log('CaptureModal: Uploading image...');
       // Upload to Supabase storage - this now returns the file path
@@ -106,11 +149,11 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
 
       console.log('CaptureModal: Image uploaded successfully with path:', filePath);
 
-      // Save clothing item to database with the file path
+      // Save clothing item to database with sanitized data
       const newItem = await addClothingItem({
-        name: formData.name || 'Untitled Item',
+        name: sanitizedName || 'Untitled Item',
         category: formData.category,
-        color: formData.color,
+        color: sanitizedColor,
         occasion: formData.occasion,
         image_url: filePath // Store the file path, not the URL
       });
@@ -199,7 +242,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -241,9 +284,11 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value.substring(0, 100) })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Enter item name"
+                    maxLength={100}
+                    spellCheck={false}
                   />
                 </div>
 
@@ -271,10 +316,12 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
                   <input
                     type="text"
                     value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value.substring(0, 50) })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Enter color"
                     required
+                    maxLength={50}
+                    spellCheck={false}
                   />
                 </div>
 
@@ -306,6 +353,7 @@ const CaptureModal: React.FC<CaptureModalProps> = ({ onClose }) => {
               <button
                 onClick={() => setStep('crop')}
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+                disabled={loading}
               >
                 Back
               </button>

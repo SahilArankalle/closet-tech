@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Crown, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { checkAuthRateLimit, cleanupAuthState } from '../utils/secureAuth';
+import { sanitizeErrorMessage } from '../utils/security';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -26,29 +28,43 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Rate limiting check
+    const clientIP = 'client'; // In production, you'd get the real IP
+    if (!checkAuthRateLimit(clientIP)) {
+      setError('Too many login attempts. Please wait 5 minutes before trying again.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     setSuccessMessage('');
 
     try {
+      // Clean up any existing auth state before new attempt
+      if (!isLogin) {
+        cleanupAuthState();
+      }
+
       const { error } = isLogin 
         ? await signIn(email, password)
         : await signUp(email, password);
 
       if (error) {
-        // Handle specific error messages with user-friendly text
-        if (error.message.includes('Invalid login credentials')) {
+        // Sanitize and handle specific error messages
+        const sanitizedError = sanitizeErrorMessage(error);
+        
+        if (error.message?.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please check your credentials and try again.');
-        } else if (error.message.includes('User already registered')) {
+        } else if (error.message?.includes('User already registered')) {
           setError('An account with this email already exists. Please sign in instead.');
-        } else if (error.message.includes('Email not confirmed')) {
+        } else if (error.message?.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before signing in.');
-        } else if (error.message.includes('signup_disabled')) {
+        } else if (error.message?.includes('signup_disabled')) {
           setError('New signups are currently disabled. Please contact support.');
-        } else if (error.message.includes('rate_limit')) {
+        } else if (error.message?.includes('rate_limit')) {
           setError('Too many attempts. Please wait a moment before trying again.');
         } else {
-          setError(error.message);
+          setError(sanitizedError);
         }
       } else if (!isLogin) {
         setSuccessMessage('🎉 Welcome to ClosetIQ! We\'ve sent a confirmation link to your email. Please check your inbox and click the link to activate your account.');
@@ -58,7 +74,8 @@ const Auth = () => {
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError('An unexpected error occurred. Please try again.');
+      const sanitizedError = sanitizeErrorMessage(err);
+      setError(sanitizedError || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +85,15 @@ const Auth = () => {
     setIsLogin(!isLogin);
     setError('');
     setSuccessMessage('');
+    // Clear form when switching modes for security
+    setEmail('');
+    setPassword('');
   };
+
+  // Enhanced input validation
+  const isEmailValid = email.includes('@') && email.includes('.') && email.length > 5;
+  const isPasswordValid = password.length >= 6;
+  const isFormValid = isEmailValid && isPasswordValid;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -114,7 +139,7 @@ const Auth = () => {
           )}
 
           {/* Email/Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Email
@@ -124,13 +149,14 @@ const Auth = () => {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
                   required
                   maxLength={254}
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your email"
                   disabled={loading}
                   autoComplete={isLogin ? "email" : "username"}
+                  spellCheck={false}
                 />
               </div>
             </div>
@@ -146,17 +172,20 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                   maxLength={128}
                   className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
                   placeholder="Enter your password"
                   disabled={loading}
                   autoComplete={isLogin ? "current-password" : "new-password"}
+                  spellCheck={false}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 disabled:opacity-50"
                   disabled={loading}
+                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -168,7 +197,7 @@ const Auth = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isFormValid}
               className="w-full bg-gradient-to-r from-indigo-600 to-violet-700 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-violet-800 transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
