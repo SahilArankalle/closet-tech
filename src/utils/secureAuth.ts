@@ -1,4 +1,3 @@
-
 import { checkRateLimit, sanitizeErrorMessage } from './security';
 
 export const getSecureRedirectUrl = (): string => {
@@ -78,12 +77,6 @@ export const validateAuthInput = (email: string, password: string) => {
     errors.push('This password is too common. Please choose a stronger password');
   }
   
-  // Check for sequential characters
-  const hasSequential = /123|abc|qwe|asd|zxc/gi.test(password);
-  if (hasSequential) {
-    errors.push('Password should not contain sequential characters');
-  }
-
   return {
     isValid: errors.length === 0,
     errors
@@ -160,10 +153,6 @@ export const checkPasswordStrength = (password: string): {
 
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1;
   else feedback.push('Add special characters');
-
-  // Check for common patterns
-  if (!/(.)\1{2,}/.test(password)) score += 1;
-  else feedback.push('Avoid repeating characters');
 
   return { score, feedback };
 };
